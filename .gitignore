@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pt
+*.npz
+*.bin
+maps.json
+textures/
+tiles/
+pairs/
+out/
