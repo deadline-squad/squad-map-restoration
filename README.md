@@ -28,6 +28,30 @@ conv, scaled by 0.5), 3x3 conv 48 -> 3, 336 483 parameters. It predicts a correc
 2e-4 with a cosine decay to 0.1x, batches of 16 patches of 96 px, rotation by 90 degrees and flips, fp32 (the GTX 1650 has no
 tensor cores and fp16 is 4x slower there). The southern quarter of the play area, with a 128 px gap, is held out for validation.
 
+## Results
+
+One run, trained on Mutaha Seed v1 only (3690 steps, 25 min on a GTX 1650), `python -m mapsr.evaluate model.pt mutaha_seed tallil_seed`.
+The first set is the held-out southern quarter of the training map, the second a whole map the net never saw. Detail/truth is
+the mean |Laplacian| relative to the truth (1.0 = the same amount of fine detail).
+
+| set | image | PSNR | SSIM | edge F1 | detail/truth |
+|---|---|---|---|---|---|
+| Mutaha Seed, held-out south | bicubic | 17.32 | 0.633 | 0.773 | 0.56 |
+| | net | 23.42 | 0.685 | 0.859 | 0.25 |
+| Tallil Seed, never seen | bicubic | 16.20 | 0.426 | 0.634 | 0.99 |
+| | net | 16.23 | 0.482 | 0.546 | 0.45 |
+
+What the numbers and the before/after crops show:
+
+- The net removes the block artefacts of the whole-map texture and corrects the colour of roofs and ground. That is where
+  the PSNR gain on Mutaha comes from.
+- It does not recover fine detail: the result is smoother than the truth (detail 0.25 of the truth's), and trees, roof
+  structure and road markings of the Seed texture do not come back.
+- It does not generalise yet: on Tallil the PSNR is unchanged, the edge F1 drops from 0.634 to 0.546 and the output has less
+  than half of the detail of the truth.
+
+This model is not good enough to replace the whole-map texture in a viewer. See the open issues for the next steps.
+
 ## Inputs (not in this repository)
 
 All of them derive from game assets and are not published here.
@@ -64,7 +88,7 @@ python -m mapsr.infer mutaha Mutaha_Minimap model.pt out/mutaha-hd --png preview
   forest maps, and overfitting is checked only on the held-out southern quarter.
 - The guide is a render, not ground truth: on Manicouagan it marks a field as water.
 - PSNR gains come mostly from correcting the roof tone; structure is judged with SSIM, edge F1 and the detail ratio
-  (`mapsr.evaluate`), not by PSNR alone.
+  (`mapsr.evaluate`), not by PSNR alone. An L1 loss regresses to a smooth mean, which is why the detail ratio is low.
 - The output is a restoration by a trained model, not a capture: fine detail that no input contains is not recovered.
 
 ## Data and weights
